@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
 
 :root {
-  --paper: #f6f4ee;
-  --ink: #24231f;
-  --muted: #716f68;
-  --line: #d9d5cb;
-  --accent: #d97754;
-  --accent-dark: #ae5537;
-  --panel: #292824;
-  --panel-line: #55534d;
-  --white: #fffdf8;
+  --paper: #eef4f8;
+  --ink: #162b3d;
+  --muted: #63798a;
+  --line: #cad8e3;
+  --accent: #337dca;
+  --accent-dark: #1f629f;
+  --panel: #142c45;
+  --panel-line: #3f5a73;
+  --white: #ffffff;
   font-family: Manrope, sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -113,7 +113,7 @@ button {
 .language-control select {
   appearance: none;
   background: var(--white)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%2324231f' stroke-width='1.5'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23162b3d' stroke-width='1.5'/%3E%3C/svg%3E")
     no-repeat right 14px center;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -184,7 +184,7 @@ h1 {
 }
 .orbit {
   position: absolute;
-  border: 1px solid #ccc7bc;
+  border: 1px solid #bed0df;
   border-radius: 50%;
   aspect-ratio: 1;
 }
@@ -196,8 +196,8 @@ h1 {
 }
 .orbit-three {
   width: 102px;
-  background: #e7ddcf;
-  border-color: #e7ddcf;
+  background: #dceaf5;
+  border-color: #dceaf5;
 }
 .orbit-center {
   position: relative;
@@ -228,7 +228,7 @@ h1 {
   gap: 24px;
 }
 .measurement .section-tag {
-  color: #b5afa5;
+  color: #aebfd0;
 }
 .measurement h2,
 .readout h2 {
@@ -240,7 +240,7 @@ h1 {
   margin: 9px 0 0;
 }
 .measurement-count {
-  color: #b5afa5;
+  color: #aebfd0;
   margin-top: 4px;
 }
 .measure-form {
@@ -259,15 +259,15 @@ h1 {
 .measure-fields input {
   min-width: 0;
   flex: 1;
-  background: #faf8f2;
-  border: 1px solid #faf8f2;
+  background: #f7fbff;
+  border: 1px solid #f7fbff;
   color: var(--ink);
   border-radius: 8px;
   padding: 17px 18px;
   font-size: 15px;
 }
 .measure-fields input::placeholder {
-  color: #98948d;
+  color: #879bab;
 }
 .measure-fields button {
   border: 0;
@@ -286,7 +286,7 @@ h1 {
     background 0.3s;
 }
 .measure-fields button:hover {
-  background: #e18b6a;
+  background: #4a94da;
   transform: translateY(-2px);
 }
 .measure-fields button:active {
@@ -299,7 +299,7 @@ h1 {
 .form-note {
   font-size: 13px;
   line-height: 20px;
-  color: #c1bcb1;
+  color: #bfd1df;
   margin: 12px 0 0;
   max-width: 690px;
 }
@@ -307,7 +307,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   margin-top: 38px;
-  color: #d3cec4;
+  color: #d1e0ec;
 }
 .status-text {
   display: flex;
@@ -318,17 +318,17 @@ h1 {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #8f8a80;
+  background: #8297aa;
 }
 .status-light.active {
-  background: #f2b48e;
+  background: #88c8ec;
   animation: pulse 1.3s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 .status-light.complete {
-  background: #a6ce96;
+  background: #7cc8d1;
 }
 .status-light.failed {
-  background: #f08a80;
+  background: #ef9a9a;
 }
 .progress-track {
   display: grid;
@@ -342,7 +342,7 @@ h1 {
   background: var(--panel-line);
 }
 .progress-track span.complete {
-  background: #a6ce96;
+  background: #7cc8d1;
 }
 .progress-track span.active {
   background: var(--accent);
@@ -352,12 +352,12 @@ h1 {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: #49302d;
-  border: 1px solid #89554a;
+  background: #3d344d;
+  border: 1px solid #806383;
   border-radius: 8px;
   padding: 16px;
   margin-top: 24px;
-  color: #ffe2d7;
+  color: #f4dff0;
   font-size: 14px;
   line-height: 22px;
 }
@@ -433,7 +433,7 @@ h1 {
 .chart-panel {
   margin-top: 34px;
   border: 1px solid var(--line);
-  background: #fbfaf6;
+  background: #f8fbfe;
   border-radius: 12px;
   padding: 26px 30px 22px;
 }
@@ -466,7 +466,7 @@ h1 {
   height: var(--bar-height);
   min-height: 6px;
   border-radius: 4px 4px 0 0;
-  background: #e3dfd5;
+  background: #dce8f1;
   transform-origin: bottom;
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -474,7 +474,7 @@ h1 {
   background: var(--accent);
 }
 .chart-bar.is-active {
-  background: #e8af98;
+  background: #98c7e8;
   animation: bar-pulse 1.3s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 .chart-column > span {

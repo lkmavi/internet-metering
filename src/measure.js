@@ -74,7 +74,7 @@ function siteError(response, page, number) {
     /\/captcha\//i.test(response.url)
   ) {
     return new Error(
-      `Запрос ${number}: сайт требует подтверждения человека (HTTP ${response.status}). Откройте адрес в браузере или выберите другой ресурс.`,
+      `Запрос ${number}: сайт требует подтверждения человека (HTTP ${response.status}). Для замера укажите прямую ссылку на файл, доступный без проверки браузера.`,
     );
   }
   return new Error(`Запрос ${number}: HTTP ${response.status}`);
