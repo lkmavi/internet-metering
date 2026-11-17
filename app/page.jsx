@@ -41,7 +41,10 @@ export default function Home() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-      if (!response.ok) throw new Error(t.startFailed);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || t.startFailed);
+      }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';

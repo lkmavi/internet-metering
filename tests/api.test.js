@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { POST } from '../app/api/measure/route.js';
+import { createMeasureHandler } from '../src/api-handler.js';
+const POST = createMeasureHandler(fetch);
 
 const listen = (server) =>
   new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));

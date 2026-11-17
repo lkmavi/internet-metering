@@ -47,7 +47,7 @@ export function summarize(samples) {
  * @param {number} number
  * @returns {Promise<number>} Downloaded bytes
  */
-async function consumeResponse(response, number) {
+async function consumeResponse(response, number, maxResponseBytes) {
   if (!response.ok) {
     await response.body?.cancel();
     throw new Error(`Запрос ${number}: HTTP ${response.status}`);
@@ -59,6 +59,9 @@ async function consumeResponse(response, number) {
   if (response.body) {
     for await (const chunk of response.body) {
       bytes += chunk.byteLength;
+      if (bytes > maxResponseBytes) {
+        throw new Error(`Запрос ${number}: размер ответа превышает лимит`);
+      }
       if (isHtml && htmlBytes < 1_000_000) {
         htmlChunks.push(chunk.subarray(0, 1_000_000 - htmlBytes));
         htmlBytes += Math.min(chunk.byteLength, 1_000_000 - htmlBytes);
@@ -94,6 +97,7 @@ export async function measure(input, options = {}) {
     clock = () => performance.now(),
     onSample = () => {},
     onStart = () => {},
+    maxResponseBytes = Infinity,
   } = options;
   const url = validateUrl(input);
   if (!Number.isInteger(count) || count < 1)
@@ -123,7 +127,7 @@ export async function measure(input, options = {}) {
         },
         redirect: 'follow',
       });
-      bytes = await consumeResponse(response, index + 1);
+      bytes = await consumeResponse(response, index + 1, maxResponseBytes);
     } catch (error) {
       if (error.name === 'TimeoutError' || error.name === 'AbortError')
         throw new Error(`Запрос ${index + 1}: превышен таймаут (${limit} мс)`);
