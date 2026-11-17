@@ -7,7 +7,7 @@ import { renderDashboard } from './tui-view.js';
 import { getMessages } from './i18n.js';
 import { exitAfterOutput } from './exit.js';
 
-const terminal = createInterface({ input: stdin, output: stdout });
+let terminal;
 const interactive = Boolean(stdout.isTTY);
 const samples = [];
 let timer;
@@ -37,8 +37,13 @@ function draw(extra = {}) {
 try {
   const config = loadConfig();
   language = config.language;
-  url =
-    process.argv[2] || config.url || (await terminal.question(getMessages(language).addressPrompt));
+  url = process.argv[2] || config.url;
+  if (!url) {
+    terminal = createInterface({ input: stdin, output: stdout });
+    url = await terminal.question(getMessages(language).addressPrompt);
+    terminal.close();
+    terminal = undefined;
+  }
   if (interactive) stdout.write('\n\x1b[?25l');
   draw();
   if (interactive)
@@ -66,6 +71,6 @@ try {
   process.exitCode = 1;
 } finally {
   if (interactive) stdout.write('\x1b[?25h\n');
-  terminal.close();
+  terminal?.close();
   await exitAfterOutput();
 }

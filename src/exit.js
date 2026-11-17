@@ -1,10 +1,14 @@
 import process from 'node:process';
 
-/** Flush terminal output before exiting, even if HTTP keep-alive handles remain open. */
+/** Flush output if possible, then terminate despite terminal or HTTP handles. */
 export async function exitAfterOutput() {
-  await Promise.all([
-    new Promise((resolve) => process.stdout.write('', resolve)),
-    new Promise((resolve) => process.stderr.write('', resolve)),
+  const code = process.exitCode || 0;
+  await Promise.race([
+    Promise.all([
+      new Promise((resolve) => process.stdout.write('', resolve)),
+      new Promise((resolve) => process.stderr.write('', resolve)),
+    ]),
+    new Promise((resolve) => setTimeout(resolve, 100)),
   ]);
-  process.exit(process.exitCode || 0);
+  process.exit(code);
 }
