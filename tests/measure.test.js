@@ -35,7 +35,7 @@ test('integration: ten requests finish in sequence and count streamed response b
     const result = await measure(`http://127.0.0.1:${port}/file`, { onSample: item => progress.push(item.number) });
     assert.equal(calls, 10); assert.equal(peak, 1); assert.equal(result.totalBytes, 30_720);
     assert.deepEqual(progress, [1,2,3,4,5,6,7,8,9,10]);
-    assert.equal(new Set(urls).size, 10);
+    assert.equal(new Set(urls).size, 1);
     assert.ok(result.averageMs > 0); assert.ok(result.megabitsPerSecond > 0);
   } finally { await close(server); }
 });
@@ -44,5 +44,13 @@ test('integration: non-success response stops measurement', async () => {
   const server = createServer((_req, res) => { res.writeHead(503); res.end('down'); });
   const port = await listen(server);
   try { await assert.rejects(measure(`http://127.0.0.1:${port}/file`), /HTTP 503/); }
+  finally { await close(server); }
+});
+
+
+test('integration: detects a human verification page', async () => {
+  const server = createServer((_req, res) => { res.writeHead(200, { 'content-type': 'text/html' }); res.end('<h1>Подтвердите, что вы человек</h1>'); });
+  const port = await listen(server);
+  try { await assert.rejects(measure(`http://127.0.0.1:${port}/file`), /подтверждение человека/); }
   finally { await close(server); }
 });
