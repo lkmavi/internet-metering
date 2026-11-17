@@ -1,43 +1,46 @@
 import { formatBytes, formatMs, formatSpeed } from './format.js';
 
-const C = { reset: '\x1b[0m', ink: '\x1b[38;2;225;246;238m', muted: '\x1b[38;2;139;177;166m', lime: '\x1b[38;2;188;242;105m', cyan: '\x1b[38;2;91;210;217m', coral: '\x1b[38;2;255;159;125m' };
-const paint = (value, color, enabled) => enabled ? `${C[color]}${value}${C.reset}` : value;
-const cells = '▁▂▃▄▅▆▇█';
+const ANSI = { reset: '\x1b[0m', text: '\x1b[38;2;224;229;235m', muted: '\x1b[38;2;136;145;157m', accent: '\x1b[38;2;93;188;222m', success: '\x1b[38;2;166;216;153m', error: '\x1b[38;2;239;135;135m' };
+const tint = (text, tone, color) => color ? `${ANSI[tone]}${text}${ANSI.reset}` : text;
+const blocks = '▁▂▃▄▅▆▇█';
 
-/** Map per-request speeds to ten terminal chart cells.
- * @param {number[]} values
- */
+/** Map per-request speeds to ten aligned terminal chart columns. */
 export function sparkline(values) {
-  if (!values.length) return '·'.repeat(10);
+  if (!values.length) return Array(10).fill('·').join('  ');
   const max = Math.max(...values, 1);
-  return values.map(value => cells[Math.min(7, Math.max(0, Math.ceil(value / max * 8) - 1))]).join('') + '·'.repeat(Math.max(0, 10 - values.length));
+  return Array.from({ length: 10 }, (_, index) => values[index] === undefined
+    ? '·'
+    : blocks[Math.min(7, Math.max(0, Math.ceil(values[index] / max * 8) - 1))]).join('  ');
 }
 
-/** Render the complete terminal dashboard from current measurement state. */
-export function renderDashboard({ url, samples, active, frame = 0, result = null, error = null, color = true }) {
-  const widths = 54;
-  const line = '─'.repeat(widths);
+/** Render a compact inline dashboard without taking over the terminal screen. */
+export function renderDashboard({ url, samples, active, frame = 0, result = null, error = null, color = true, columns = 80 }) {
   const rates = samples.map(sample => sample.durationMs ? sample.bytes * 8 / sample.durationMs / 1000 : 0);
-  const done = '■'.repeat(samples.length);
-  const pending = '□'.repeat(10 - samples.length);
   const spinner = ['◐', '◓', '◑', '◒'][frame % 4];
-  const label = result ? 'ЗАМЕР ЗАВЕРШЁН' : error ? 'ОШИБКА' : `${spinner}  ЗАПРОС ${active}/10 · ПОЛУЧАЕМ ОТВЕТ`;
+  const status = error ? tint('Ошибка', 'error', color) : result ? tint('Готово', 'success', color) : `${tint(spinner, 'accent', color)} Запрос ${active} из 10`;
+  const maxUrl = Math.max(25, Math.min(columns - 6, 90));
+  const shownUrl = url.length > maxUrl ? `${url.slice(0, maxUrl - 1)}…` : url;
+  const progress = `${tint('━'.repeat(samples.length), 'accent', color)}${tint('┄'.repeat(10 - samples.length), 'muted', color)}`;
   const rows = [
-    paint('  ◒  Л И Н И Я    /    INTERNET METERING', 'lime', color),
-    paint(`  ${line}`, 'muted', color),
-    `  ${paint('АДРЕС', 'muted', color)}  ${url.length > 45 ? url.slice(0, 42) + '…' : url}`,
-    `  ${paint('СТАТУС', 'muted', color)}  ${paint(label, error ? 'coral' : 'cyan', color)}`,
+    `${tint('╭─', 'muted', color)} ${tint('Линия', 'accent', color)} ${tint('/ замер скорости', 'muted', color)}`,
+    `  ${tint(shownUrl, 'text', color)}`,
     '',
-    `  ${paint(done, 'lime', color)}${paint(pending, 'muted', color)}   ${String(samples.length).padStart(2, '0')} / 10`,
+    `  ${progress}  ${samples.length}/10    ${status}`,
     '',
-    `  ${paint('СКОРОСТЬ ПО ЗАПРОСАМ · Мбит/с', 'muted', color)}`,
-    `  ${paint(sparkline(rates), 'cyan', color)}`,
-    `  ${paint('1 2 3 4 5 6 7 8 9 10', 'muted', color)}`,
+    `  ${tint('Скорость запросов · Мбит/с', 'muted', color)}`,
+    `  ${tint(sparkline(rates), 'accent', color)}`,
+    `  ${tint(Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(2, '0')).join(' '), 'muted', color)}`,
     '',
-    `  ${paint('ПОСЛЕДНИЙ ОТВЕТ', 'muted', color)}  ${samples.length ? `${formatMs(samples.at(-1).durationMs)} · ${formatBytes(samples.at(-1).bytes)}` : 'ожидание'}`,
   ];
-  if (result) rows.push('', `  ${paint('СКОРОСТЬ', 'muted', color)}         ${paint(formatSpeed(result.megabitsPerSecond), 'lime', color)}`, `  ${paint('СРЕДНЕЕ ВРЕМЯ', 'muted', color)}    ${formatMs(result.averageMs)}`, `  ${paint('СКАЧАНО', 'muted', color)}         ${formatBytes(result.totalBytes)}`);
-  if (error) rows.push('', `  ${paint(error, 'coral', color)}`);
-  rows.push(paint(`  ${line}`, 'muted', color));
+  if (result) {
+    rows.push(`  ${tint('Скорость'.padEnd(20), 'muted', color)} ${tint(formatSpeed(result.megabitsPerSecond), 'success', color)}`);
+    rows.push(`  ${tint('Среднее время'.padEnd(20), 'muted', color)} ${formatMs(result.averageMs)}`);
+    rows.push(`  ${tint('Скачано'.padEnd(20), 'muted', color)} ${formatBytes(result.totalBytes)}`);
+  } else if (error) {
+    rows.push(`  ${tint(error, 'error', color)}`);
+  } else {
+    rows.push(`  ${tint('Последний ответ', 'muted', color)}  ${samples.length ? `${formatMs(samples.at(-1).durationMs)} · ${formatBytes(samples.at(-1).bytes)}` : 'ожидание сервера…'}`);
+  }
+  rows.push(tint('╰─', 'muted', color));
   return rows.join('\n') + '\n';
 }

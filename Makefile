@@ -10,7 +10,7 @@ test:
 cli:
 	npm run measure -- $(URL)
 tui:
-	npm run tui -- $(URL)
+	@npm run --silent tui -- $(URL)
 up:
 	docker compose up --build -d
 down:
