@@ -195,3 +195,16 @@ test('integration: explains temporary IP block from site response', async () => 
     await close(server);
   }
 });
+
+test('integration: detects a browser challenge returned as HTTP 200', async () => {
+  const server = createServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end('<meta http-equiv="refresh" content="5; URL=/?bm-verify=token">');
+  });
+  const port = await listen(server);
+  try {
+    await assert.rejects(measure(`http://127.0.0.1:${port}/page`), /подтверждения человека/);
+  } finally {
+    await close(server);
+  }
+});

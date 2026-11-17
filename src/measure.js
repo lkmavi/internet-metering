@@ -68,7 +68,9 @@ function siteError(response, page, number) {
     );
   }
   if (
-    /подтвердите, что вы человек|confirm that you are human|\/captcha\//i.test(page) ||
+    /подтвердите, что вы человек|confirm that you are human|\/captcha\/|bm-verify=|bot manager/i.test(
+      page,
+    ) ||
     /\/captcha\//i.test(response.url)
   ) {
     return new Error(
@@ -108,7 +110,9 @@ async function consumeResponse(response, number, maxResponseBytes) {
   if (isHtml) {
     const page = Buffer.concat(htmlChunks).toString('utf8');
     if (
-      /подтвердите, что вы человек|confirm that you are human|\/captcha\//i.test(page) ||
+      /подтвердите, что вы человек|confirm that you are human|\/captcha\/|bm-verify=|bot manager/i.test(
+        page,
+      ) ||
       /\/captcha\//i.test(response.url)
     ) {
       throw siteError(response, page, number);

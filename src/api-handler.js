@@ -10,7 +10,9 @@ let activeMeasurements = 0;
 export function createMeasureHandler(fetchImpl) {
   return async function post(request) {
     const origin = request.headers.get('origin');
-    if (origin && origin !== new URL(request.url).origin) {
+    // Next may expose its bind address in request.url; the browser uses the Host header.
+    const publicHost = request.headers.get('host') || new URL(request.url).host;
+    if (origin && new URL(origin).host !== publicHost) {
       return Response.json({ error: 'Недопустимый источник запроса' }, { status: 403 });
     }
     const now = Date.now();

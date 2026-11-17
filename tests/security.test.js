@@ -50,3 +50,20 @@ test('measurement stops once the response byte limit is exceeded', async () => {
     /размер ответа/,
   );
 });
+
+test('API accepts browser origin when Next binds to 0.0.0.0', async () => {
+  const post = createMeasureHandler(async () => new Response('ok'));
+  const request = new Request('http://0.0.0.0:3001/api/measure', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      host: 'localhost:3001',
+      origin: 'http://localhost:3001',
+    },
+    body: JSON.stringify({ url: 'https://example.com/file' }),
+  });
+  const response = await post(request);
+  assert.equal(response.status, 200);
+  const events = (await response.text()).trim().split('\n').map(JSON.parse);
+  assert.equal(events.at(-1).type, 'result');
+});
