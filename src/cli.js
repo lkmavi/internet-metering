@@ -3,6 +3,7 @@ import { measure } from './measure.js';
 import { loadConfig } from './config.js';
 import { formatBytes, formatMs, formatSpeed } from './format.js';
 import { getMessages } from './i18n.js';
+import { exitAfterOutput } from './exit.js';
 
 let config;
 try {
@@ -36,3 +37,4 @@ if (!url) {
     process.exitCode = 1;
   }
 }
+await exitAfterOutput();

@@ -5,6 +5,7 @@ import { measure } from './measure.js';
 import { loadConfig } from './config.js';
 import { renderDashboard } from './tui-view.js';
 import { getMessages } from './i18n.js';
+import { exitAfterOutput } from './exit.js';
 
 const terminal = createInterface({ input: stdin, output: stdout });
 const interactive = Boolean(stdout.isTTY);
@@ -66,4 +67,5 @@ try {
 } finally {
   if (interactive) stdout.write('\x1b[?25h\n');
   terminal.close();
+  await exitAfterOutput();
 }
