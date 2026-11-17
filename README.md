@@ -74,7 +74,7 @@ Compose собирает production-образ Next.js и публикует в�
 
 ## Проверка и CI
 
-GitHub Actions запускает ESLint, Prettier, тесты и production-сборку на Node.js 20 и 22 при push и в PR.
+GitHub Actions запускает отдельное задание для ESLint и Prettier, а тесты и production-сборку проверяет на Ubuntu, Windows и macOS с Node.js 20 и 22 при push и в PR.
 
 ```bash
 npm run check
