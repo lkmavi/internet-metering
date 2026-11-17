@@ -12,7 +12,7 @@ export async function POST(request) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = value => controller.enqueue(encoder.encode(JSON.stringify(value) + '\n'));
-      try { const result = await measure(url, { onSample: sample => send({ type: 'sample', sample }) }); send({ type: 'result', result }); }
+      try { const result = await measure(url, { onStart: number => send({ type: 'start', number }), onSample: sample => send({ type: 'sample', sample }) }); send({ type: 'result', result }); }
       catch (error) { send({ type: 'error', error: error.message }); }
       finally { controller.close(); }
     },

@@ -18,8 +18,8 @@ npm run measure -- https://example.com/large-image.jpg
 | Режим | Команда | Что делает |
 | --- | --- | --- |
 | CLI | `npm run measure -- URL` | Печатает каждый запрос и итог |
-| TUI | `npm run tui -- URL` | Показывает прогресс в терминале; без URL запросит адрес |
-| Web UI | `npm run dev` | Открыть http://localhost:3000 |
+| TUI | `npm run tui -- URL` | Показывает цветную панель, анимацию и график скорости каждого запроса; без URL запросит адрес |
+| Web UI | `npm run dev` | Открыть http://localhost:3000; живой прогресс и график десяти запросов |
 
 Примеры с Makefile:
 
