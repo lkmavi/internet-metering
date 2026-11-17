@@ -54,3 +54,17 @@ test('integration: detects a human verification page', async () => {
   try { await assert.rejects(measure(`http://127.0.0.1:${port}/file`), /подтверждение человека/); }
   finally { await close(server); }
 });
+
+test('integration: request timeout interrupts a stalled response body', async () => {
+  const server = createServer((_req, res) => { res.writeHead(200); res.write('partial'); });
+  const port = await listen(server);
+  try { await assert.rejects(measure(`http://127.0.0.1:${port}/file`, { timeoutMs: 50, totalTimeoutMs: 500 }), /превышен таймаут/); }
+  finally { server.closeAllConnections(); await close(server); }
+});
+
+test('integration: total timeout limits the full run', async () => {
+  const server = createServer(async (_req, res) => { await new Promise(resolve => setTimeout(resolve, 40)); res.end('ok'); });
+  const port = await listen(server);
+  try { await assert.rejects(measure(`http://127.0.0.1:${port}/file`, { timeoutMs: 500, totalTimeoutMs: 70 }), /таймаут/); }
+  finally { await close(server); }
+});

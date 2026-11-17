@@ -2,13 +2,15 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { measure } from './measure.js';
+import { loadConfig } from './config.js';
 import { formatBytes, formatMs, formatSpeed } from './format.js';
 
 const terminal = createInterface({ input: stdin, output: stdout });
 try {
-  const url = process.argv[2] || await terminal.question('Адрес файла для измерения: ');
+  const config = loadConfig();
+  const url = process.argv[2] || config.url || await terminal.question('Адрес для измерения: ');
   stdout.write('\x1b[?25l');
-  const result = await measure(url, { onSample: sample => {
+  const result = await measure(url, { timeoutMs: config.requestTimeoutMs, totalTimeoutMs: config.totalTimeoutMs, onStart: number => stdout.write(`\r\x1b[2KЗапрос ${number}/10…`), onSample: sample => {
     const done = '━'.repeat(sample.number);
     const remaining = '·'.repeat(10 - sample.number);
     stdout.write(`\r\x1b[2K${done}${remaining}  ${sample.number}/10  ${formatMs(sample.durationMs)}  ${formatBytes(sample.bytes)}`);
