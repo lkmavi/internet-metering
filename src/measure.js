@@ -41,6 +41,43 @@ export function summarize(samples) {
   };
 }
 
+/** Read at most 4 KB of an error page so blocked requests fail without downloading it. */
+async function readErrorSnippet(response) {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (size < 4096) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      chunks.push(value.subarray(0, 4096 - size));
+      size += Math.min(value.byteLength, 4096 - size);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+/** Explain a site's anti-bot response without attempting to bypass it. */
+function siteError(response, page, number) {
+  if (/через 24 часа|try again in 24 hours|посещение сайта завершено/i.test(page)) {
+    return new Error(
+      `Запрос ${number}: сайт временно заблокировал доступ с вашего IP (HTTP ${response.status}). Попробуйте позже или выберите другой ресурс.`,
+    );
+  }
+  if (
+    /подтвердите, что вы человек|confirm that you are human|\/captcha\//i.test(page) ||
+    /\/captcha\//i.test(response.url)
+  ) {
+    return new Error(
+      `Запрос ${number}: сайт требует подтверждения человека (HTTP ${response.status}). Откройте адрес в браузере или выберите другой ресурс.`,
+    );
+  }
+  return new Error(`Запрос ${number}: HTTP ${response.status}`);
+}
+
 /**
  * Read one response to completion. Only a small HTML prefix is retained to detect challenge pages.
  * @param {Response} response
@@ -49,8 +86,8 @@ export function summarize(samples) {
  */
 async function consumeResponse(response, number, maxResponseBytes) {
   if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`Запрос ${number}: HTTP ${response.status}`);
+    const page = await readErrorSnippet(response);
+    throw siteError(response, page, number);
   }
   const isHtml = (response.headers.get('content-type') || '').includes('text/html');
   const htmlChunks = [];
@@ -74,9 +111,7 @@ async function consumeResponse(response, number, maxResponseBytes) {
       /подтвердите, что вы человек|confirm that you are human|\/captcha\//i.test(page) ||
       /\/captcha\//i.test(response.url)
     ) {
-      throw new Error(
-        'Сайт запросил подтверждение человека. Откройте адрес в браузере и выберите другой файл для замера.',
-      );
+      throw siteError(response, page, number);
     }
   }
   return bytes;

@@ -88,7 +88,7 @@ test('integration: detects a human verification page', async () => {
   });
   const port = await listen(server);
   try {
-    await assert.rejects(measure(`http://127.0.0.1:${port}/file`), /подтверждение человека/);
+    await assert.rejects(measure(`http://127.0.0.1:${port}/file`), /подтверждения человека/);
   } finally {
     await close(server);
   }
@@ -158,6 +158,38 @@ test('integration: preserves a URL query and uses cache control headers', async 
     assert.deepEqual(
       requests.map((item) => item.cacheControl),
       ['no-cache', 'no-cache'],
+    );
+  } finally {
+    await close(server);
+  }
+});
+
+test('integration: explains CAPTCHA response instead of a bare HTTP 403', async () => {
+  const server = createServer((_req, res) => {
+    res.writeHead(403, { 'content-type': 'text/html' });
+    res.end('<h1>Confirm that you are human</h1>');
+  });
+  const port = await listen(server);
+  try {
+    await assert.rejects(
+      measure(`http://127.0.0.1:${port}/file`),
+      /требует подтверждения человека.*HTTP 403/,
+    );
+  } finally {
+    await close(server);
+  }
+});
+
+test('integration: explains temporary IP block from site response', async () => {
+  const server = createServer((_req, res) => {
+    res.writeHead(503, { 'content-type': 'text/html' });
+    res.end('Ваше посещение сайта завершено, пожалуйста попробуйте зайти через 24 часа.');
+  });
+  const port = await listen(server);
+  try {
+    await assert.rejects(
+      measure(`http://127.0.0.1:${port}/file`),
+      /заблокировал доступ с вашего IP.*HTTP 503/,
     );
   } finally {
     await close(server);
