@@ -7,6 +7,9 @@ function positiveMs(value, name, fallback) {
   return number;
 }
 
+/** Read validated defaults and optional environment overrides for all interfaces.
+ * @param {NodeJS.ProcessEnv} env
+ */
 export function loadConfig(env = process.env) {
   return {
     url: env.METER_URL || '',

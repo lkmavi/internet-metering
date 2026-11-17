@@ -4,12 +4,16 @@ const C = { reset: '\x1b[0m', ink: '\x1b[38;2;225;246;238m', muted: '\x1b[38;2;1
 const paint = (value, color, enabled) => enabled ? `${C[color]}${value}${C.reset}` : value;
 const cells = '▁▂▃▄▅▆▇█';
 
+/** Map per-request speeds to ten terminal chart cells.
+ * @param {number[]} values
+ */
 export function sparkline(values) {
   if (!values.length) return '·'.repeat(10);
   const max = Math.max(...values, 1);
   return values.map(value => cells[Math.min(7, Math.max(0, Math.ceil(value / max * 8) - 1))]).join('') + '·'.repeat(Math.max(0, 10 - values.length));
 }
 
+/** Render the complete terminal dashboard from current measurement state. */
 export function renderDashboard({ url, samples, active, frame = 0, result = null, error = null, color = true }) {
   const widths = 54;
   const line = '─'.repeat(widths);

@@ -68,3 +68,32 @@ test('integration: total timeout limits the full run', async () => {
   try { await assert.rejects(measure(`http://127.0.0.1:${port}/file`, { timeoutMs: 500, totalTimeoutMs: 70 }), /таймаут/); }
   finally { await close(server); }
 });
+
+test('summary rejects empty input and handles an empty response', () => {
+  assert.throws(() => summarize([]), /хотя бы один/);
+  const summary = summarize([{ number: 1, bytes: 0, durationMs: 10 }]);
+  assert.equal(summary.megabitsPerSecond, 0);
+  assert.equal(summary.totalBytes, 0);
+});
+
+test('measurement rejects invalid counts and timeouts before requesting', async () => {
+  const url = 'https://example.com/file';
+  await assert.rejects(measure(url, { count: 0 }), /положительным/);
+  await assert.rejects(measure(url, { timeoutMs: -1 }), /Таймауты/);
+  await assert.rejects(measure(url, { totalTimeoutMs: 0 }), /Таймауты/);
+});
+
+test('integration: preserves a URL query and uses cache control headers', async () => {
+  const requests = [];
+  const server = createServer((req, res) => {
+    requests.push({ url: req.url, cacheControl: req.headers['cache-control'] });
+    res.end('html or file');
+  });
+  const port = await listen(server);
+  try {
+    const result = await measure(`http://127.0.0.1:${port}/page?tag=8k`, { count: 2 });
+    assert.equal(result.totalBytes, 24);
+    assert.deepEqual(requests.map(item => item.url), ['/page?tag=8k', '/page?tag=8k']);
+    assert.deepEqual(requests.map(item => item.cacheControl), ['no-cache', 'no-cache']);
+  } finally { await close(server); }
+});

@@ -3,6 +3,7 @@ import { measure } from '../../../src/measure.js';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Stream one JSON event per line so the browser can update as requests finish. */
 export async function POST(request) {
   let url;
   try { ({ url } = await request.json()); }

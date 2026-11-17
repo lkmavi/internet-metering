@@ -4,6 +4,13 @@ import { loadConfig } from './config.js';
 export const REQUEST_COUNT = 10;
 export const DEFAULT_TIMEOUT_MS = 15_000;
 
+/** @typedef {{number: number, durationMs: number, bytes: number}} Sample */
+
+/**
+ * Validate a user supplied target without changing its path or query string.
+ * @param {string} input
+ * @returns {URL}
+ */
 export function validateUrl(input) {
   let url;
   try { url = new URL(input); } catch { throw new Error('Укажите корректный URL с http:// или https://'); }
@@ -12,52 +19,86 @@ export function validateUrl(input) {
   return url;
 }
 
+/**
+ * Calculate throughput from the total bytes and the sum of request durations.
+ * @param {Sample[]} samples
+ */
 export function summarize(samples) {
+  if (samples.length === 0) throw new Error('Для расчёта нужен хотя бы один запрос');
   const totalBytes = samples.reduce((sum, sample) => sum + sample.bytes, 0);
-  const totalSeconds = samples.reduce((sum, sample) => sum + sample.durationMs, 0) / 1000;
+  const totalMs = samples.reduce((sum, sample) => sum + sample.durationMs, 0);
   return {
     count: samples.length,
     totalBytes,
-    averageMs: samples.reduce((sum, sample) => sum + sample.durationMs, 0) / samples.length,
-    megabitsPerSecond: totalSeconds ? totalBytes * 8 / totalSeconds / 1_000_000 : 0,
+    averageMs: totalMs / samples.length,
+    megabitsPerSecond: totalMs ? totalBytes * 8 / totalMs / 1000 : 0,
     samples,
   };
 }
 
-export async function measure(input, { count = REQUEST_COUNT, timeoutMs = loadConfig().requestTimeoutMs, totalTimeoutMs = loadConfig().totalTimeoutMs, fetchImpl = fetch, clock = () => performance.now(), onSample = () => {}, onStart = () => {} } = {}) {
+/**
+ * Read one response to completion. Only a small HTML prefix is retained to detect challenge pages.
+ * @param {Response} response
+ * @param {number} number
+ * @returns {Promise<number>} Downloaded bytes
+ */
+async function consumeResponse(response, number) {
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Запрос ${number}: HTTP ${response.status}`);
+  }
+  const isHtml = (response.headers.get('content-type') || '').includes('text/html');
+  const htmlChunks = [];
+  let htmlBytes = 0;
+  let bytes = 0;
+  if (response.body) {
+    for await (const chunk of response.body) {
+      bytes += chunk.byteLength;
+      if (isHtml && htmlBytes < 1_000_000) {
+        htmlChunks.push(chunk.subarray(0, 1_000_000 - htmlBytes));
+        htmlBytes += Math.min(chunk.byteLength, 1_000_000 - htmlBytes);
+      }
+    }
+  }
+  if (isHtml) {
+    const page = Buffer.concat(htmlChunks).toString('utf8');
+    if (/подтвердите, что вы человек|confirm that you are human|\/captcha\//i.test(page) || /\/captcha\//i.test(response.url)) {
+      throw new Error('Сайт запросил подтверждение человека. Откройте адрес в браузере и выберите другой файл для замера.');
+    }
+  }
+  return bytes;
+}
+
+/**
+ * Download the target sequentially and report each completed sample.
+ * @param {string} input
+ * @param {{count?: number, timeoutMs?: number, totalTimeoutMs?: number, fetchImpl?: typeof fetch, clock?: () => number, onStart?: (number: number) => void | Promise<void>, onSample?: (sample: Sample) => void | Promise<void>}} options
+ */
+export async function measure(input, options = {}) {
+  const config = loadConfig();
+  const { count = REQUEST_COUNT, timeoutMs = config.requestTimeoutMs, totalTimeoutMs = config.totalTimeoutMs,
+    fetchImpl = fetch, clock = () => performance.now(), onSample = () => {}, onStart = () => {} } = options;
   const url = validateUrl(input);
   if (!Number.isInteger(count) || count < 1) throw new Error('Количество запросов должно быть положительным целым числом');
   if (![timeoutMs, totalTimeoutMs].every(value => Number.isSafeInteger(value) && value > 0)) throw new Error('Таймауты должны быть положительными целыми числами');
   const deadline = clock() + totalTimeoutMs;
   const samples = [];
   for (let index = 0; index < count; index++) {
-    const requestUrl = new URL(url);
     const remaining = deadline - clock();
     if (remaining <= 0) throw new Error(`Общий таймаут ${totalTimeoutMs} мс: завершено ${samples.length} из ${count} запросов`);
+    const limit = Math.max(1, Math.floor(Math.min(timeoutMs, remaining)));
     const started = clock();
     await onStart(index + 1);
-    let response;
-    try { response = await fetchImpl(requestUrl, {
-      signal: AbortSignal.timeout(Math.max(1, Math.floor(Math.min(timeoutMs, remaining)))),
-      headers: { 'cache-control': 'no-cache', 'pragma': 'no-cache', 'accept-encoding': 'identity', 'user-agent': 'InternetMetering/1.0 (+local speed test)' },
-      redirect: 'follow',
-    });
-    } catch (error) {
-      if (error.name === 'TimeoutError' || error.name === 'AbortError') throw new Error(`Запрос ${index + 1}: превышен таймаут (${Math.min(timeoutMs, Math.ceil(remaining))} мс)`);
-      throw error;
-    }
-    let bytes = 0;
+    let bytes;
     try {
-    if (!response.ok) { await response.body?.cancel(); throw new Error(`Запрос ${index + 1}: HTTP ${response.status}`); }
-    const contentType = response.headers.get('content-type') || '';
-    const html = contentType.includes('text/html') ? [] : null;
-    if (response.body) for await (const chunk of response.body) { bytes += chunk.byteLength; if (html && bytes <= 1_000_000) html.push(chunk); }
-    if (html) {
-      const page = Buffer.concat(html).toString('utf8');
-      if (/подтвердите, что вы человек|confirm that you are human|\/captcha\//i.test(page) || /\/captcha\//i.test(response.url)) throw new Error('Сайт запросил подтверждение человека. Откройте адрес в браузере и выберите другой файл для замера.');
-    }
+      const response = await fetchImpl(new URL(url), {
+        signal: AbortSignal.timeout(limit),
+        headers: { 'cache-control': 'no-cache', pragma: 'no-cache', 'accept-encoding': 'identity', 'user-agent': 'InternetMetering/1.0 (+local speed test)' },
+        redirect: 'follow',
+      });
+      bytes = await consumeResponse(response, index + 1);
     } catch (error) {
-      if (error.name === 'TimeoutError' || error.name === 'AbortError') throw new Error(`Запрос ${index + 1}: превышен таймаут (${Math.min(timeoutMs, Math.ceil(remaining))} мс)`);
+      if (error.name === 'TimeoutError' || error.name === 'AbortError') throw new Error(`Запрос ${index + 1}: превышен таймаут (${limit} мс)`);
       throw error;
     }
     const sample = { number: index + 1, durationMs: clock() - started, bytes };
